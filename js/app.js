@@ -43,7 +43,6 @@
     tagFilter: $('tag-filter'),
     tagFilterControls: $('tag-filter-controls'),
     tagFilterCount: $('tag-filter-count'),
-    tagMode: $('tag-mode'),
     tagClear: $('tag-clear'),
     navBtns: document.querySelectorAll('.nav-btn'),
     views: document.querySelectorAll('.view'),
@@ -60,8 +59,7 @@
   };
 
   // ---- 拡張状態 ----
-  const tagFilter = new Set();
-  let tagFilterMode = 'or'; // or | and
+  const tagFilter = new Set(); // 選択タグを合算（OR）
   let activeView = 'summary';
   const range = { from: null, to: null }; // YYYY-MM-DD
 
@@ -167,10 +165,7 @@
   // ---- タグ絞り込み（複数選択して合算） ----
   function applyTagFilter(list) {
     if (tagFilter.size === 0) return list;
-    if (tagFilterMode === 'and') {
-      return list.filter((e) => [...tagFilter].every((t) => e.tags.includes(t)));
-    }
-    return list.filter((e) => e.tags.some((t) => tagFilter.has(t)));
+    return list.filter((e) => e.tags.some((t) => tagFilter.has(t))); // いずれかを含む＝合算
   }
 
   function renderTagFilterChips() {
@@ -184,11 +179,8 @@
           `<button type="button" class="chip ${tagFilter.has(t) ? 'on' : ''}" data-ftag="${escapeHtml(t)}">${escapeHtml(t)}</button>`
         ).join('')
       : '<span class="empty" style="padding:2px 0">タグはまだありません</span>';
-    const has = tagFilter.size > 0;
-    els.tagFilterControls.hidden = !has;
+    els.tagFilterControls.hidden = tagFilter.size === 0;
     els.tagFilterCount.textContent = String(tagFilter.size);
-    els.tagMode.textContent = tagFilterMode === 'and' ? 'すべて含む' : 'いずれか';
-    els.tagMode.classList.toggle('on', tagFilterMode === 'and');
   }
 
   function netClass(n) {
@@ -560,10 +552,6 @@
       if (!btn) return;
       const t = btn.dataset.ftag;
       if (tagFilter.has(t)) tagFilter.delete(t); else tagFilter.add(t);
-      render();
-    });
-    els.tagMode.addEventListener('click', () => {
-      tagFilterMode = tagFilterMode === 'or' ? 'and' : 'or';
       render();
     });
     els.tagClear.addEventListener('click', () => { tagFilter.clear(); render(); });

@@ -7,3 +7,4 @@ probe.cjs
 probe*.cjs
 shot-*.png
 icons/preview-*.png
+icons/_src/

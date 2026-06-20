@@ -50,6 +50,9 @@ python -m http.server 8000
 
 収支 = `return - stake`、回収率 = `return / stake × 100`。
 
+## クレジット
+- アイコンの四つ葉グラフィックは [OpenMoji](https://openmoji.org/)（CC BY-SA 4.0）を使用し、金貨・背景は本プロジェクトで描画・合成。
+
 ## 今後の候補
 - グラフ（推移の折れ線）
 - タグの複数条件フィルタ（AND/OR）
