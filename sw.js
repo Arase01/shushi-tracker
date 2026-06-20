@@ -1,7 +1,7 @@
 // 収支トラッカー — Service Worker（オフライン対応）
 'use strict';
 
-const CACHE = 'shushi-tracker-v1';
+const CACHE = 'shushi-tracker-v2';
 const ASSETS = [
   './',
   './index.html',

@@ -218,6 +218,7 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
 .fab:active { transform: scale(.94); }
 
 /* モーダル */
+.modal[hidden] { display: none; } /* .modal の display:flex が hidden 属性を打ち消すため明示的に非表示化 */
 .modal {
   position: fixed;
   inset: 0;

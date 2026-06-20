@@ -1,0 +1,5 @@
+# ローカル検証用ツール（アプリ本体はビルド不要）
+node_modules/
+package.json
+package-lock.json
+probe.cjs
