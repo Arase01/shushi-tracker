@@ -314,9 +314,6 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
 .chart svg { width: 100%; height: auto; display: block; }
 .chart .empty { padding: 40px 0; }
 
-.share-row { display: flex; gap: 10px; margin-bottom: 20px; }
-.share-row button { flex: 1; padding: 13px; border-radius: 12px; font-size: 15px; font-weight: 600; border: none; }
-
 /* ====== 結果カード（パチンコ信頼度カラー） ====== */
 .result-card {
   position: relative;

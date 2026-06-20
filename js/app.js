@@ -55,8 +55,7 @@
     gRoi: $('g-roi'),
     resultCard: $('result-card'),
     chart: $('chart'),
-    btnShare: $('btn-share'),
-    btnSaveImg: $('btn-save-img'),
+    gTagBreakdown: $('g-tag-breakdown'),
     presetRow: document.querySelector('.preset-row'),
   };
 
@@ -65,7 +64,6 @@
   let tagFilterMode = 'or'; // or | and
   let activeView = 'summary';
   const range = { from: null, to: null }; // YYYY-MM-DD
-  let lastResult = null; // シェア/画像用
 
   // ---- ユーティリティ ----
   const yen = (n) => `${n < 0 ? '−' : ''}${Math.abs(n).toLocaleString('ja-JP')}円`;
@@ -161,7 +159,7 @@
     els.netPill.textContent = signedYen(allNet);
     els.netPill.className = 'net-pill ' + netClass(allNet);
 
-    renderTagBreakdown(aggregateByTag(filtered));
+    renderTagBreakdown(aggregateByTag(filtered), els.tagBreakdown);
     renderEntryList(filtered);
     renderGraph();
   }
@@ -197,13 +195,13 @@
     return n > 0 ? 'plus' : n < 0 ? 'minus' : 'zero';
   }
 
-  function renderTagBreakdown(groups) {
+  function renderTagBreakdown(groups, target) {
     if (!groups.length) {
-      els.tagBreakdown.innerHTML = '<p class="empty">記録がありません</p>';
+      target.innerHTML = '<p class="empty">記録がありません</p>';
       return;
     }
     const maxAbs = Math.max(...groups.map((g) => Math.abs(g.net)), 1);
-    els.tagBreakdown.innerHTML = groups.map((g) => {
+    target.innerHTML = groups.map((g) => {
       const w = (Math.abs(g.net) / maxAbs) * 100;
       return `
       <div class="tag-row">
@@ -442,6 +440,7 @@
     els.gRoi.textContent = agg.roi === null ? '—' : `${agg.roi.toFixed(0)}%`;
     renderResultCard(agg, list);
     renderChart(list);
+    renderTagBreakdown(aggregateByTag(list), els.gTagBreakdown);
   }
 
   function topTags(list, n) {
@@ -459,7 +458,6 @@
     const meta = TIER_META[tier];
     const tags = topTags(list, 3);
     const roiText = agg.roi === null ? '—' : `${agg.roi.toFixed(0)}%`;
-    lastResult = { tier, meta, net: agg.net, roi: agg.roi, count: list.length, tags, range: rangeLabel() };
     els.resultCard.className = 'result-card tier-' + tier;
     els.resultCard.innerHTML = `
       <div class="rc-emoji">${meta.emoji}</div>
@@ -509,93 +507,6 @@
         <text x="${W - pad}" y="14" fill="#8aa0bd" font-size="9" text-anchor="end">${dates[dates.length - 1]}</text>
         <text x="${X(last.t).toFixed(1)}" y="${(Y(last.cum) - 8).toFixed(1)}" fill="${color}" font-size="11" font-weight="700" text-anchor="end">${signedYen(last.cum)}</text>
       </svg>`;
-  }
-
-  // ---- シェア / 画像保存 ----
-  function shareText() {
-    const r = lastResult;
-    if (!r) return '';
-    const roi = r.roi === null ? '' : `（回収率${r.roi.toFixed(0)}%）`;
-    const hashtags = ['#収支トラッカー', r.meta.tag, ...r.tags.map((t) => '#' + t)].join(' ');
-    return `${r.meta.emoji} ${r.meta.label} ${signedYen(r.net)}${roi}\n${r.range}\n${hashtags}`;
-  }
-  async function shareResult() {
-    const text = shareText();
-    if (!text) return;
-    try {
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(text); alert('結果をコピーしました。投稿に貼り付けてください。'); }
-    } catch (_) { /* ユーザーキャンセル等は無視 */ }
-  }
-
-  // 結果カードを正方形PNGに描画（オフラインで動く・外部ライブラリ不要）
-  async function saveImage() {
-    const r = lastResult;
-    if (!r) return;
-    const S = 1080;
-    const cv = document.createElement('canvas');
-    cv.width = S; cv.height = S;
-    const c = cv.getContext('2d');
-    const themes = {
-      oogachi: ['#2a0f3a', '#0a0712'], kachi: ['#b8860b', '#5a3d05'],
-      even: ['#2b3242', '#1a1f2b'], make: ['#1b3a6b', '#0f2444'], oomake: ['#2a2f3a', '#14171d'],
-    };
-    const [c1, c2] = themes[r.tier];
-    const bg = c.createLinearGradient(0, 0, 0, S);
-    bg.addColorStop(0, c1); bg.addColorStop(1, c2);
-    c.fillStyle = bg; c.fillRect(0, 0, S, S);
-    c.textAlign = 'center';
-    c.fillStyle = '#fff';
-    c.font = '160px sans-serif';
-    c.fillText(r.meta.emoji, S / 2, 340);
-    // ティア名
-    c.font = '900 110px sans-serif';
-    if (r.tier === 'oogachi') {
-      const g = c.createLinearGradient(S * 0.15, 0, S * 0.85, 0);
-      ['#ff2d55', '#ff9500', '#ffd60a', '#34c759', '#00c7ff', '#5e5ce6', '#bf5af2'].forEach((col, i, a) => g.addColorStop(i / (a.length - 1), col));
-      c.fillStyle = g;
-    } else if (r.tier === 'kachi') c.fillStyle = '#ffe9a8';
-    else c.fillStyle = '#ffffff';
-    c.fillText(r.meta.label, S / 2, 480);
-    // 収支
-    c.font = '900 150px sans-serif';
-    if (r.tier === 'oogachi') {
-      const g = c.createLinearGradient(S * 0.1, 0, S * 0.9, 0);
-      ['#ff2d55', '#ff9500', '#ffd60a', '#34c759', '#00c7ff', '#5e5ce6', '#bf5af2'].forEach((col, i, a) => g.addColorStop(i / (a.length - 1), col));
-      c.fillStyle = g;
-    } else if (r.net > 0) c.fillStyle = '#7CFFB0';
-    else if (r.net < 0) c.fillStyle = '#FF9D9D';
-    else c.fillStyle = '#cfd8e6';
-    c.fillText(signedYen(r.net), S / 2, 640);
-    // メタ
-    c.fillStyle = '#d7deea';
-    c.font = '44px sans-serif';
-    const roi = r.roi === null ? '—' : `${r.roi.toFixed(0)}%`;
-    c.fillText(`回収率 ${roi}  ・  ${r.count}件`, S / 2, 740);
-    c.fillStyle = '#aab4c4';
-    c.font = '38px sans-serif';
-    c.fillText(r.range, S / 2, 800);
-    if (r.tags.length) {
-      c.fillStyle = '#c7d0e0';
-      c.font = '40px sans-serif';
-      c.fillText(r.tags.map((t) => '#' + t).join('  '), S / 2, 880);
-    }
-    c.fillStyle = '#ffffff66';
-    c.font = '34px sans-serif';
-    c.fillText('収支トラッカー', S / 2, 1020);
-
-    const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
-    const file = new File([blob], `result-${todayStr()}.png`, { type: 'image/png' });
-    try {
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], text: shareText() });
-        return;
-      }
-    } catch (_) { /* fallthrough to download */ }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = file.name; a.click();
-    URL.revokeObjectURL(url);
   }
 
   // ---- イベント ----
@@ -667,8 +578,6 @@
     });
     els.gFrom.addEventListener('change', () => { range.from = els.gFrom.value; renderGraph(); });
     els.gTo.addEventListener('change', () => { range.to = els.gTo.value; renderGraph(); });
-    els.btnShare.addEventListener('click', shareResult);
-    els.btnSaveImg.addEventListener('click', saveImage);
   }
 
   // ---- 初期化 ----
