@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f766e" />
+  <title>収支トラッカー</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>収支トラッカー</h1>
+    <div class="header-right">
+      <span id="net-pill" class="net-pill">±0円</span>
+      <button id="btn-menu" class="icon-btn" aria-label="メニュー">⋯</button>
+    </div>
+  </header>
+
+  <div id="menu-pop" class="menu-pop" hidden>
+    <button id="menu-export">バックアップを書き出す</button>
+    <button id="menu-import">バックアップを読み込む</button>
+  </div>
+  <input type="file" id="import-file" accept="application/json" hidden />
+
+  <main>
+    <!-- 集計ビュー -->
+    <section id="view-summary" class="view active">
+      <div class="filter-bar">
+        <select id="period-select" aria-label="期間">
+          <option value="all">全期間</option>
+          <option value="month" selected>今月</option>
+          <option value="year">今年</option>
+        </select>
+        <div class="period-nav" id="period-nav">
+          <button id="period-prev" aria-label="前へ">‹</button>
+          <span id="period-label">—</span>
+          <button id="period-next" aria-label="次へ">›</button>
+        </div>
+      </div>
+
+      <div class="totals">
+        <div class="total-card">
+          <span class="t-label">投資</span>
+          <span class="t-value" id="sum-stake">0円</span>
+        </div>
+        <div class="total-card">
+          <span class="t-label">回収</span>
+          <span class="t-value" id="sum-return">0円</span>
+        </div>
+        <div class="total-card net">
+          <span class="t-label">収支</span>
+          <span class="t-value" id="sum-net">0円</span>
+        </div>
+        <div class="total-card">
+          <span class="t-label">回収率</span>
+          <span class="t-value" id="sum-roi">—</span>
+        </div>
+      </div>
+
+      <h2 class="section-title">タグ別収支</h2>
+      <div id="tag-breakdown" class="tag-breakdown"></div>
+
+      <h2 class="section-title">記録一覧</h2>
+      <div id="entry-list" class="entry-list"></div>
+    </section>
+  </main>
+
+  <button id="fab" class="fab" aria-label="記録を追加">＋</button>
+
+  <!-- 入力モーダル -->
+  <div id="entry-modal" class="modal" hidden>
+    <div class="modal-sheet">
+      <div class="modal-grabber"></div>
+      <h2 id="modal-title">記録を追加</h2>
+      <form id="entry-form">
+        <input type="hidden" id="entry-id" />
+
+        <label>日付
+          <input type="date" id="f-date" required />
+        </label>
+
+        <div class="row">
+          <label>投資額（円）
+            <input type="number" id="f-stake" inputmode="numeric" min="0" step="1" placeholder="0" required />
+          </label>
+          <label>回収額（円）
+            <input type="number" id="f-return" inputmode="numeric" min="0" step="1" placeholder="0" required />
+          </label>
+        </div>
+
+        <div class="net-preview" id="net-preview">収支: ±0円</div>
+
+        <label>タグ
+          <input type="text" id="f-tags" placeholder="競馬, 中山, 単勝 (カンマ区切り)" autocomplete="off" />
+        </label>
+        <div id="tag-suggest" class="tag-suggest"></div>
+
+        <label>メモ
+          <input type="text" id="f-memo" placeholder="任意" autocomplete="off" />
+        </label>
+
+        <div class="modal-actions">
+          <button type="button" id="btn-delete" class="btn-danger" hidden>削除</button>
+          <button type="button" id="btn-cancel" class="btn-ghost">キャンセル</button>
+          <button type="submit" class="btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/db.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
