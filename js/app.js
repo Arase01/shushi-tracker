@@ -40,7 +40,32 @@
     menuExport: $('menu-export'),
     menuImport: $('menu-import'),
     importFile: $('import-file'),
+    tagFilter: $('tag-filter'),
+    tagFilterControls: $('tag-filter-controls'),
+    tagFilterCount: $('tag-filter-count'),
+    tagMode: $('tag-mode'),
+    tagClear: $('tag-clear'),
+    navBtns: document.querySelectorAll('.nav-btn'),
+    views: document.querySelectorAll('.view'),
+    gFrom: $('g-from'),
+    gTo: $('g-to'),
+    gStake: $('g-stake'),
+    gReturn: $('g-return'),
+    gNet: $('g-net'),
+    gRoi: $('g-roi'),
+    resultCard: $('result-card'),
+    chart: $('chart'),
+    btnShare: $('btn-share'),
+    btnSaveImg: $('btn-save-img'),
+    presetRow: document.querySelector('.preset-row'),
   };
+
+  // ---- 拡張状態 ----
+  const tagFilter = new Set();
+  let tagFilterMode = 'or'; // or | and
+  let activeView = 'summary';
+  const range = { from: null, to: null }; // YYYY-MM-DD
+  let lastResult = null; // シェア/画像用
 
   // ---- ユーティリティ ----
   const yen = (n) => `${n < 0 ? '−' : ''}${Math.abs(n).toLocaleString('ja-JP')}円`;
@@ -119,10 +144,11 @@
 
   // ---- レンダリング ----
   function render() {
+    renderTagFilterChips();
     els.periodLabel.textContent = periodLabelText();
     els.periodNav.style.visibility = period.mode === 'all' ? 'hidden' : 'visible';
 
-    const filtered = entries.filter(inPeriod);
+    const filtered = applyTagFilter(entries.filter(inPeriod));
     const agg = aggregate(filtered);
 
     els.sumStake.textContent = yen(agg.stake);
@@ -137,6 +163,34 @@
 
     renderTagBreakdown(aggregateByTag(filtered));
     renderEntryList(filtered);
+    renderGraph();
+  }
+
+  // ---- タグ絞り込み（複数選択して合算） ----
+  function applyTagFilter(list) {
+    if (tagFilter.size === 0) return list;
+    if (tagFilterMode === 'and') {
+      return list.filter((e) => [...tagFilter].every((t) => e.tags.includes(t)));
+    }
+    return list.filter((e) => e.tags.some((t) => tagFilter.has(t)));
+  }
+
+  function renderTagFilterChips() {
+    const counts = new Map();
+    for (const e of entries) for (const t of e.tags) counts.set(t, (counts.get(t) || 0) + 1);
+    const tags = [...counts.entries()].sort((a, b) => b[1] - a[1]).map((x) => x[0]);
+    // 既に存在しないタグが選択に残っていたら除去
+    for (const t of [...tagFilter]) if (!counts.has(t)) tagFilter.delete(t);
+    els.tagFilter.innerHTML = tags.length
+      ? tags.map((t) =>
+          `<button type="button" class="chip ${tagFilter.has(t) ? 'on' : ''}" data-ftag="${escapeHtml(t)}">${escapeHtml(t)}</button>`
+        ).join('')
+      : '<span class="empty" style="padding:2px 0">タグはまだありません</span>';
+    const has = tagFilter.size > 0;
+    els.tagFilterControls.hidden = !has;
+    els.tagFilterCount.textContent = String(tagFilter.size);
+    els.tagMode.textContent = tagFilterMode === 'and' ? 'すべて含む' : 'いずれか';
+    els.tagMode.classList.toggle('on', tagFilterMode === 'and');
   }
 
   function netClass(n) {
@@ -314,6 +368,236 @@
     els.menuPop.hidden = show === undefined ? !els.menuPop.hidden : !show;
   }
 
+  // ---- ビュー切替 ----
+  function switchView(view) {
+    activeView = view;
+    els.views.forEach((v) => v.classList.toggle('active', v.id === `view-${view}`));
+    els.navBtns.forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+    els.fab.classList.toggle('hide', view !== 'summary'); // 追加ボタンは集計画面のみ
+    window.scrollTo(0, 0);
+  }
+
+  // ---- 結果ティア（パチンコ信頼度カラー） ----
+  // 大勝ち=虹 / 勝ち=金 / トントン / 負け=青 / 大負け=消灯
+  function tierOf(net, stake) {
+    if (net === 0) return 'even';
+    const r = stake > 0 ? net / stake : net > 0 ? 1 : -1;
+    if (net > 0) return r >= 1.0 ? 'oogachi' : 'kachi'; // 回収率200%以上で大勝ち
+    return r <= -0.5 ? 'oomake' : 'make'; // 投資の半分超を失ったら大負け
+  }
+  const TIER_META = {
+    oogachi: { emoji: '🌈', label: '大勝ち', tag: '#超大当り' },
+    kachi: { emoji: '🎉', label: '勝ち', tag: '#大当り' },
+    even: { emoji: '😐', label: 'トントン', tag: '#プラマイゼロ' },
+    make: { emoji: '😢', label: '負け', tag: '#ハズレ' },
+    oomake: { emoji: '💀', label: '大負け', tag: '#ご臨終' },
+  };
+
+  // ---- 期間レンジ ----
+  function defaultRange() {
+    const to = todayStr();
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    const tz = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return { from: tz.toISOString().slice(0, 10), to };
+  }
+  function applyPreset(preset) {
+    const now = new Date();
+    const y = now.getFullYear();
+    if (preset === '30') {
+      Object.assign(range, defaultRange());
+    } else if (preset === 'month') {
+      range.from = `${y}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      range.to = todayStr();
+    } else if (preset === 'year') {
+      range.from = `${y}-01-01`;
+      range.to = todayStr();
+    } else if (preset === 'all') {
+      const dates = entries.map((e) => e.date).sort();
+      range.from = dates[0] || `${y}-01-01`;
+      range.to = dates[dates.length - 1] || todayStr();
+    }
+    els.gFrom.value = range.from;
+    els.gTo.value = range.to;
+    renderGraph();
+  }
+
+  function rangeList() {
+    return entries
+      .filter((e) => e.date >= range.from && e.date <= range.to)
+      .slice()
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  }
+
+  function renderGraph() {
+    if (!range.from || !range.to) Object.assign(range, defaultRange());
+    if (els.gFrom.value !== range.from) els.gFrom.value = range.from;
+    if (els.gTo.value !== range.to) els.gTo.value = range.to;
+    const list = rangeList();
+    const agg = aggregate(list);
+    els.gStake.textContent = yen(agg.stake);
+    els.gReturn.textContent = yen(agg.ret);
+    els.gNet.textContent = signedYen(agg.net);
+    els.gNet.className = 't-value ' + netClass(agg.net);
+    els.gRoi.textContent = agg.roi === null ? '—' : `${agg.roi.toFixed(0)}%`;
+    renderResultCard(agg, list);
+    renderChart(list);
+  }
+
+  function topTags(list, n) {
+    const counts = new Map();
+    for (const e of list) for (const t of e.tags) counts.set(t, (counts.get(t) || 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map((x) => x[0]);
+  }
+
+  function rangeLabel() {
+    return `${range.from} 〜 ${range.to}`;
+  }
+
+  function renderResultCard(agg, list) {
+    const tier = tierOf(agg.net, agg.stake);
+    const meta = TIER_META[tier];
+    const tags = topTags(list, 3);
+    const roiText = agg.roi === null ? '—' : `${agg.roi.toFixed(0)}%`;
+    lastResult = { tier, meta, net: agg.net, roi: agg.roi, count: list.length, tags, range: rangeLabel() };
+    els.resultCard.className = 'result-card tier-' + tier;
+    els.resultCard.innerHTML = `
+      <div class="rc-emoji">${meta.emoji}</div>
+      <div class="rc-tier">${meta.label}</div>
+      <div class="rc-net">${signedYen(agg.net)}</div>
+      <div class="rc-meta">回収率 ${roiText} ・ ${list.length}件 ・ ${rangeLabel()}</div>
+      ${tags.length ? `<div class="rc-tags">${tags.map((t) => `<span class="chip">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      <span class="rc-mark">収支トラッカー</span>`;
+  }
+
+  function renderChart(list) {
+    if (!list.length) {
+      els.chart.innerHTML = '<p class="empty">この期間に記録がありません</p>';
+      return;
+    }
+    const byDate = new Map();
+    for (const e of list) byDate.set(e.date, (byDate.get(e.date) || 0) + (e.return - e.stake));
+    const dates = [...byDate.keys()].sort();
+    let cum = 0;
+    const pts = dates.map((d) => ({ t: Date.parse(d), cum: (cum += byDate.get(d)) }));
+    const W = 340, H = 180, pad = 24;
+    const ts = pts.map((p) => p.t);
+    const xmin = Math.min(...ts), xmax = Math.max(...ts);
+    const cums = pts.map((p) => p.cum);
+    let ymin = Math.min(0, ...cums), ymax = Math.max(0, ...cums);
+    if (ymin === ymax) { ymin -= 1; ymax += 1; }
+    const X = (t) => pad + (xmax === xmin ? 0.5 : (t - xmin) / (xmax - xmin)) * (W - 2 * pad);
+    const Y = (v) => pad + (1 - (v - ymin) / (ymax - ymin)) * (H - 2 * pad);
+    const line = pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.t).toFixed(1)} ${Y(p.cum).toFixed(1)}`).join(' ');
+    const last = pts[pts.length - 1];
+    const color = last.cum > 0 ? '#34d399' : last.cum < 0 ? '#f87171' : '#8aa0bd';
+    const zeroY = Y(0).toFixed(1);
+    const area = `${line} L${X(last.t).toFixed(1)} ${zeroY} L${X(pts[0].t).toFixed(1)} ${zeroY} Z`;
+    els.chart.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="収支の累積推移">
+        <defs>
+          <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${color}" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <line x1="${pad}" y1="${zeroY}" x2="${W - pad}" y2="${zeroY}" stroke="#ffffff33" stroke-dasharray="3 3"/>
+        <path d="${area}" fill="url(#cg)"/>
+        <path d="${line}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${X(last.t).toFixed(1)}" cy="${Y(last.cum).toFixed(1)}" r="4" fill="${color}"/>
+        <text x="${pad}" y="14" fill="#8aa0bd" font-size="9">${dates[0]}</text>
+        <text x="${W - pad}" y="14" fill="#8aa0bd" font-size="9" text-anchor="end">${dates[dates.length - 1]}</text>
+        <text x="${X(last.t).toFixed(1)}" y="${(Y(last.cum) - 8).toFixed(1)}" fill="${color}" font-size="11" font-weight="700" text-anchor="end">${signedYen(last.cum)}</text>
+      </svg>`;
+  }
+
+  // ---- シェア / 画像保存 ----
+  function shareText() {
+    const r = lastResult;
+    if (!r) return '';
+    const roi = r.roi === null ? '' : `（回収率${r.roi.toFixed(0)}%）`;
+    const hashtags = ['#収支トラッカー', r.meta.tag, ...r.tags.map((t) => '#' + t)].join(' ');
+    return `${r.meta.emoji} ${r.meta.label} ${signedYen(r.net)}${roi}\n${r.range}\n${hashtags}`;
+  }
+  async function shareResult() {
+    const text = shareText();
+    if (!text) return;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else { await navigator.clipboard.writeText(text); alert('結果をコピーしました。投稿に貼り付けてください。'); }
+    } catch (_) { /* ユーザーキャンセル等は無視 */ }
+  }
+
+  // 結果カードを正方形PNGに描画（オフラインで動く・外部ライブラリ不要）
+  async function saveImage() {
+    const r = lastResult;
+    if (!r) return;
+    const S = 1080;
+    const cv = document.createElement('canvas');
+    cv.width = S; cv.height = S;
+    const c = cv.getContext('2d');
+    const themes = {
+      oogachi: ['#2a0f3a', '#0a0712'], kachi: ['#b8860b', '#5a3d05'],
+      even: ['#2b3242', '#1a1f2b'], make: ['#1b3a6b', '#0f2444'], oomake: ['#2a2f3a', '#14171d'],
+    };
+    const [c1, c2] = themes[r.tier];
+    const bg = c.createLinearGradient(0, 0, 0, S);
+    bg.addColorStop(0, c1); bg.addColorStop(1, c2);
+    c.fillStyle = bg; c.fillRect(0, 0, S, S);
+    c.textAlign = 'center';
+    c.fillStyle = '#fff';
+    c.font = '160px sans-serif';
+    c.fillText(r.meta.emoji, S / 2, 340);
+    // ティア名
+    c.font = '900 110px sans-serif';
+    if (r.tier === 'oogachi') {
+      const g = c.createLinearGradient(S * 0.15, 0, S * 0.85, 0);
+      ['#ff2d55', '#ff9500', '#ffd60a', '#34c759', '#00c7ff', '#5e5ce6', '#bf5af2'].forEach((col, i, a) => g.addColorStop(i / (a.length - 1), col));
+      c.fillStyle = g;
+    } else if (r.tier === 'kachi') c.fillStyle = '#ffe9a8';
+    else c.fillStyle = '#ffffff';
+    c.fillText(r.meta.label, S / 2, 480);
+    // 収支
+    c.font = '900 150px sans-serif';
+    if (r.tier === 'oogachi') {
+      const g = c.createLinearGradient(S * 0.1, 0, S * 0.9, 0);
+      ['#ff2d55', '#ff9500', '#ffd60a', '#34c759', '#00c7ff', '#5e5ce6', '#bf5af2'].forEach((col, i, a) => g.addColorStop(i / (a.length - 1), col));
+      c.fillStyle = g;
+    } else if (r.net > 0) c.fillStyle = '#7CFFB0';
+    else if (r.net < 0) c.fillStyle = '#FF9D9D';
+    else c.fillStyle = '#cfd8e6';
+    c.fillText(signedYen(r.net), S / 2, 640);
+    // メタ
+    c.fillStyle = '#d7deea';
+    c.font = '44px sans-serif';
+    const roi = r.roi === null ? '—' : `${r.roi.toFixed(0)}%`;
+    c.fillText(`回収率 ${roi}  ・  ${r.count}件`, S / 2, 740);
+    c.fillStyle = '#aab4c4';
+    c.font = '38px sans-serif';
+    c.fillText(r.range, S / 2, 800);
+    if (r.tags.length) {
+      c.fillStyle = '#c7d0e0';
+      c.font = '40px sans-serif';
+      c.fillText(r.tags.map((t) => '#' + t).join('  '), S / 2, 880);
+    }
+    c.fillStyle = '#ffffff66';
+    c.font = '34px sans-serif';
+    c.fillText('収支トラッカー', S / 2, 1020);
+
+    const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+    const file = new File([blob], `result-${todayStr()}.png`, { type: 'image/png' });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: shareText() });
+        return;
+      }
+    } catch (_) { /* fallthrough to download */ }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = file.name; a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // ---- イベント ----
   function bind() {
     els.fab.addEventListener('click', () => openModal(null));
@@ -358,6 +642,33 @@
       if (file) importData(file);
       e.target.value = '';
     });
+
+    // タグ絞り込み
+    els.tagFilter.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-ftag]');
+      if (!btn) return;
+      const t = btn.dataset.ftag;
+      if (tagFilter.has(t)) tagFilter.delete(t); else tagFilter.add(t);
+      render();
+    });
+    els.tagMode.addEventListener('click', () => {
+      tagFilterMode = tagFilterMode === 'or' ? 'and' : 'or';
+      render();
+    });
+    els.tagClear.addEventListener('click', () => { tagFilter.clear(); render(); });
+
+    // ビュー切替
+    els.navBtns.forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
+
+    // 結果ページ
+    els.presetRow.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-preset]');
+      if (btn) applyPreset(btn.dataset.preset);
+    });
+    els.gFrom.addEventListener('change', () => { range.from = els.gFrom.value; renderGraph(); });
+    els.gTo.addEventListener('change', () => { range.to = els.gTo.value; renderGraph(); });
+    els.btnShare.addEventListener('click', shareResult);
+    els.btnSaveImg.addEventListener('click', saveImage);
   }
 
   // ---- 初期化 ----
@@ -365,6 +676,9 @@
     bind();
     entries = await DB.getAll();
     els.periodSelect.value = period.mode;
+    Object.assign(range, defaultRange());
+    els.gFrom.value = range.from;
+    els.gTo.value = range.to;
     render();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(() => {});

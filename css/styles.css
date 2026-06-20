@@ -25,7 +25,10 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
-body { padding-bottom: calc(88px + var(--safe-b)); }
+body { padding-bottom: calc(140px + var(--safe-b)); }
+
+.view { display: none; }
+.view.active { display: block; }
 
 .app-header {
   position: sticky;
@@ -202,7 +205,7 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
 .fab {
   position: fixed;
   right: 20px;
-  bottom: calc(20px + var(--safe-b));
+  bottom: calc(78px + var(--safe-b));
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -216,6 +219,169 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
   z-index: 20;
 }
 .fab:active { transform: scale(.94); }
+.fab.hide { display: none; }
+
+/* 下部ナビ */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  background: #0c1322ee;
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-b);
+}
+.nav-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 14px 0;
+}
+.nav-btn.active { color: var(--accent); }
+
+/* タグ絞り込み */
+.tag-filter {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+.tag-filter::-webkit-scrollbar { display: none; }
+.tag-filter .chip {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  font-size: 13px;
+}
+.tag-filter .chip.on {
+  background: var(--accent);
+  color: #04211d;
+  border-color: var(--accent);
+}
+.tag-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.tfc-label { margin-right: auto; }
+.mini-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+.mini-btn.on { background: var(--accent); color: #04211d; border-color: var(--accent); }
+
+/* グラフページ */
+.range-bar { display: flex; gap: 12px; margin-bottom: 12px; }
+.range-bar label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.range-bar input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  color: var(--text);
+  font-size: 15px;
+}
+.preset-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.chart {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.chart svg { width: 100%; height: auto; display: block; }
+.chart .empty { padding: 40px 0; }
+
+.share-row { display: flex; gap: 10px; margin-bottom: 20px; }
+.share-row button { flex: 1; padding: 13px; border-radius: 12px; font-size: 15px; font-weight: 600; border: none; }
+
+/* ====== 結果カード（パチンコ信頼度カラー） ====== */
+.result-card {
+  position: relative;
+  border-radius: 22px;
+  padding: 28px 20px 24px;
+  margin-bottom: 16px;
+  text-align: center;
+  overflow: hidden;
+  border: 2px solid #ffffff14;
+}
+.rc-emoji { font-size: 52px; line-height: 1; margin-bottom: 8px; }
+.rc-tier { font-size: 30px; font-weight: 900; letter-spacing: .06em; margin-bottom: 6px; }
+.rc-net { font-size: 44px; font-weight: 900; letter-spacing: .02em; margin: 4px 0 10px; }
+.rc-meta { font-size: 14px; opacity: .92; margin-bottom: 10px; }
+.rc-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.rc-tags .chip { background: #00000033; border-color: #ffffff22; color: #fff; }
+.rc-mark { position: absolute; right: 12px; bottom: 8px; font-size: 11px; opacity: .5; }
+
+/* 負け = 青（低信頼） */
+.tier-make { background: linear-gradient(160deg, #1b3a6b, #0f2444); color: #cfe0ff; }
+/* 大負け = 白/グレー（消灯・残念） */
+.tier-oomake { background: linear-gradient(160deg, #2a2f3a, #14171d); color: #aeb6c4; }
+/* トントン */
+.tier-even { background: linear-gradient(160deg, #2b3242, #1a1f2b); color: #c8d2e2; }
+/* 勝ち = 金（大当り） */
+.tier-kachi {
+  background: linear-gradient(160deg, #b8860b, #5a3d05);
+  color: #fff7e0;
+  border-color: #ffd86b66;
+  box-shadow: inset 0 0 40px #ffd86b33;
+}
+.tier-kachi .rc-net { color: #ffe9a8; text-shadow: 0 0 12px #ffcf5a88; }
+
+/* 大勝ち = 虹（最高信頼・確変） */
+.tier-oogachi {
+  background: radial-gradient(120% 120% at 50% 0%, #2a0f3a, #0a0712 70%);
+  border-color: transparent;
+  animation: rc-border 4s linear infinite;
+}
+@keyframes rc-border {
+  0% { box-shadow: 0 0 0 2px #ff2d55, 0 0 24px #ff2d5566; }
+  17% { box-shadow: 0 0 0 2px #ff9500, 0 0 24px #ff950066; }
+  34% { box-shadow: 0 0 0 2px #ffd60a, 0 0 24px #ffd60a66; }
+  50% { box-shadow: 0 0 0 2px #34c759, 0 0 24px #34c75966; }
+  67% { box-shadow: 0 0 0 2px #00c7ff, 0 0 24px #00c7ff66; }
+  84% { box-shadow: 0 0 0 2px #5e5ce6, 0 0 24px #5e5ce666; }
+  100% { box-shadow: 0 0 0 2px #ff2d55, 0 0 24px #ff2d5566; }
+}
+.tier-oogachi .rc-tier,
+.tier-oogachi .rc-net {
+  background: linear-gradient(90deg, #ff2d55, #ff9500, #ffd60a, #34c759, #00c7ff, #5e5ce6, #bf5af2, #ff2d55);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: rainbow-shift 2.5s linear infinite;
+  filter: drop-shadow(0 0 8px #ffffff66);
+}
+.tier-oogachi .rc-meta,
+.tier-oogachi { color: #e8e0ff; }
+@keyframes rainbow-shift { to { background-position: 200% center; } }
+@media (prefers-reduced-motion: reduce) {
+  .tier-oogachi, .tier-oogachi .rc-tier, .tier-oogachi .rc-net { animation: none; }
+}
 
 /* モーダル */
 .modal[hidden] { display: none; } /* .modal の display:flex が hidden 属性を打ち消すため明示的に非表示化 */
@@ -241,6 +407,7 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
   transition: transform .2s ease;
   max-height: 92vh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 .modal.open .modal-sheet { transform: translateY(0); }
 .modal-grabber {
@@ -261,8 +428,10 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
   color: var(--muted);
 }
 #entry-form .row { display: flex; gap: 12px; }
-#entry-form .row label { flex: 1; }
+#entry-form .row label { flex: 1; min-width: 0; } /* min-width:0 で flex 子要素を縮ませ、横はみ出しを防ぐ */
 #entry-form input {
+  width: 100%;
+  max-width: 100%;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 12px;

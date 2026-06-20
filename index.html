@@ -42,6 +42,13 @@
         </div>
       </div>
 
+      <div class="tag-filter" id="tag-filter"></div>
+      <div class="tag-filter-controls" id="tag-filter-controls" hidden>
+        <span class="tfc-label">選択タグ <span id="tag-filter-count">0</span></span>
+        <button id="tag-mode" class="mini-btn" type="button">いずれか</button>
+        <button id="tag-clear" class="mini-btn" type="button">解除</button>
+      </div>
+
       <div class="totals">
         <div class="total-card">
           <span class="t-label">投資</span>
@@ -67,9 +74,61 @@
       <h2 class="section-title">記録一覧</h2>
       <div id="entry-list" class="entry-list"></div>
     </section>
+
+    <!-- グラフビュー -->
+    <section id="view-graph" class="view">
+      <div class="range-bar">
+        <label>開始
+          <input type="date" id="g-from" />
+        </label>
+        <label>終了
+          <input type="date" id="g-to" />
+        </label>
+      </div>
+      <div class="preset-row">
+        <button class="mini-btn" data-preset="30" type="button">直近30日</button>
+        <button class="mini-btn" data-preset="month" type="button">今月</button>
+        <button class="mini-btn" data-preset="year" type="button">今年</button>
+        <button class="mini-btn" data-preset="all" type="button">全期間</button>
+      </div>
+
+      <div id="result-card" class="result-card"></div>
+
+      <div class="share-row">
+        <button id="btn-share" class="btn-primary" type="button">結果をシェア</button>
+        <button id="btn-save-img" class="btn-ghost" type="button">画像で保存</button>
+      </div>
+
+      <div class="totals">
+        <div class="total-card">
+          <span class="t-label">投資</span>
+          <span class="t-value" id="g-stake">0円</span>
+        </div>
+        <div class="total-card">
+          <span class="t-label">回収</span>
+          <span class="t-value" id="g-return">0円</span>
+        </div>
+        <div class="total-card net">
+          <span class="t-label">収支</span>
+          <span class="t-value" id="g-net">0円</span>
+        </div>
+        <div class="total-card">
+          <span class="t-label">回収率</span>
+          <span class="t-value" id="g-roi">—</span>
+        </div>
+      </div>
+
+      <h2 class="section-title">収支の推移（累積）</h2>
+      <div id="chart" class="chart"></div>
+    </section>
   </main>
 
   <button id="fab" class="fab" aria-label="記録を追加">＋</button>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-view="summary" type="button">集計</button>
+    <button class="nav-btn" data-view="graph" type="button">結果</button>
+  </nav>
 
   <!-- 入力モーダル -->
   <div id="entry-modal" class="modal" hidden>
