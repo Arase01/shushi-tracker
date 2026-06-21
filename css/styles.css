@@ -25,7 +25,7 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
-body { padding-bottom: calc(140px + var(--safe-b)); }
+body { padding-bottom: calc(96px + var(--safe-b)); }
 
 .view { display: none; }
 .view.active { display: block; }
@@ -218,26 +218,7 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
 .empty { color: var(--muted); text-align: center; padding: 24px 0; font-size: 14px; }
 
 /* FAB */
-.fab {
-  position: fixed;
-  right: 20px;
-  bottom: calc(78px + var(--safe-b));
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  border: none;
-  background: var(--accent);
-  color: #04211d;
-  font-size: 32px;
-  font-weight: 300;
-  line-height: 1;
-  box-shadow: 0 8px 24px #14b8a655;
-  z-index: 20;
-}
-.fab:active { transform: scale(.94); }
-.fab.hide { display: none; }
-
-/* 下部ナビ */
+/* 下部ナビ（中央に＋を配置し、一覧との重なりを回避） */
 .bottom-nav {
   position: fixed;
   left: 0;
@@ -245,6 +226,7 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
   bottom: 0;
   z-index: 15;
   display: flex;
+  align-items: center;
   background: #0c1322ee;
   backdrop-filter: blur(8px);
   border-top: 1px solid var(--border);
@@ -260,6 +242,22 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
   padding: 14px 0;
 }
 .nav-btn.active { color: var(--accent); }
+
+.nav-fab {
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  margin: -22px 10px 0; /* ナビ上に少し浮き出す */
+  border-radius: 50%;
+  border: 3px solid var(--bg);
+  background: var(--accent);
+  color: #04211d;
+  font-size: 30px;
+  font-weight: 300;
+  line-height: 1;
+  box-shadow: 0 6px 18px #14b8a655;
+}
+.nav-fab:active { transform: scale(.94); }
 
 /* タグ絞り込み */
 .tag-filter {

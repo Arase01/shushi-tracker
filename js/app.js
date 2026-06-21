@@ -364,7 +364,6 @@
     activeView = view;
     els.views.forEach((v) => v.classList.toggle('active', v.id === `view-${view}`));
     els.navBtns.forEach((b) => b.classList.toggle('active', b.dataset.view === view));
-    els.fab.classList.toggle('hide', view !== 'summary'); // 追加ボタンは集計画面のみ
     window.scrollTo(0, 0);
   }
 
