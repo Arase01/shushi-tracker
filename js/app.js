@@ -226,6 +226,7 @@
           ${tags ? `<div class="entry-tags">${tags}</div>` : ''}
           ${e.memo ? `<div class="entry-memo">${escapeHtml(e.memo)}</div>` : ''}
         </div>
+        <span class="entry-chevron" aria-hidden="true">›</span>
       </button>`;
     }).join('');
   }

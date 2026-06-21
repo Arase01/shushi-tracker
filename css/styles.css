@@ -151,6 +151,17 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
   margin: 24px 0 12px;
   font-weight: 600;
 }
+.section-title .hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  opacity: .8;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-left: 6px;
+}
 
 .tag-breakdown { display: flex; flex-direction: column; gap: 14px; }
 .tag-row { display: flex; flex-direction: column; gap: 6px; }
@@ -177,8 +188,13 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
   padding: 14px;
   color: var(--text);
   font: inherit;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .entry-card:active { background: var(--surface-2); }
+.entry-card .entry-main { flex: 1; min-width: 0; }
+.entry-chevron { flex: 0 0 auto; color: var(--muted); font-size: 24px; line-height: 1; }
 .entry-top { display: flex; justify-content: space-between; align-items: baseline; }
 .entry-date { color: var(--muted); font-size: 13px; }
 .entry-net { font-weight: 700; font-size: 17px; }
